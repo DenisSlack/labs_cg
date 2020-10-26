@@ -1,0 +1,287 @@
+<html>
+<body>
+	
+<canvas width='1000', height='700', id='lab06'>
+</canvas>
+	
+<script>
+function Draw_Line(x0,y0,x1,y1)
+	{
+		let dy = Math.abs(y1-y0);
+		let dx = Math.abs(x1-x0);
+
+		let dmax = Math.max(dx,dy);
+		let dmin = Math.min(dx,dy);
+                
+   	 	var xdir = (x0 < x1) ? 1 : -1;
+   		var ydir = (y0 < y1) ? 1 : -1;
+
+		let eps = 0; 
+		let k = 2*dmin;
+
+		if(dy <= dx)
+			{
+				let y = y0;
+				for(let x=x0; x*xdir<=x1*xdir;x+=xdir) {
+					ctx.fillRect(x,y,1,1);
+					eps = eps+k;
+					if(eps > dmax){
+						y += ydir;
+						eps = eps - 2*dmax;
+					}
+				}	
+			}
+		else
+			{
+				let x = x0;
+				for(let y=y0; y*ydir<=y1*ydir;y+=ydir) {
+					ctx.fillRect(x,y,1,1);
+					eps = eps+k;
+					if(eps > dmax){
+						x += xdir;
+						eps = eps - 2*dmax;
+					}
+				}	
+			}
+	}
+            
+function Add(point_1 = new Point(),point_2 = new Point()) // сложение векторов
+	{
+		return new Point((point_1.x+point_2.x),(point_1.y+point_2.y));
+	}
+
+class Line
+	{
+		t0 = 0;
+		t1 = 1;
+		V0 = new Point(); // начальная точка
+		V1 = new Point(); // конечная точка
+		N = new Point(); // нормаль
+		vec = new Point();
+		e = new Point(); // единичный вектор
+
+		constructor(start = new Point(), end = new Point())
+			{
+				this.V0.x = start.x;
+				this.V0.y = start.y;
+        			this.V1.x = end.x;
+				this.V1.y = end.y;
+                        
+        			this.vec = new Point((end.x-start.x),(end.y-start.y));
+                        
+				this.e.x = this.vec.x/Math.sqrt(Math.pow(this.vec.x,2) + Math.pow(this.vec.y,2));
+        			this.e.y = this.vec.y/Math.sqrt(Math.pow(this.vec.x,2) + Math.pow(this.vec.y,2));
+			}
+		set_coordinates(x0,y0,x1,y1)
+			{
+				this.V0.x = x0;
+        			this.V0.y = y0;
+				this.V1.x = x1;
+        			this.V1.y = y1;
+                        
+				this.vec = new Point((this.V1.x-this.V0.x),(this.V1.y-this.V0.y));
+										
+				this.e.x = this.vec.x/Math.sqrt(Math.pow(this.vec.x,2) + Math.pow(this.vec.y,2)); 
+        			this.e.y = this.vec.y/Math.sqrt(Math.pow(this.vec.x,2) + Math.pow(this.vec.y,2));
+			}
+	}	
+            
+class Point
+	{
+		x = 0.0;
+    		y = 0.0;
+
+		constructor(x = 0.0, y = 0.0)
+			{
+				this.x = x;
+				this.y = y;
+			}
+	}
+            
+class Polygon
+	{
+		begin_point = new Point();
+		last_point = new Point();
+		start = false;
+		end = false;
+		edges = [];
+		count_edges = 0;
+
+		compute_normals() // нормаль
+			{
+				for(let index = 0; index < this.count_edges;index++) {
+
+					let n = new Point( -1 * (this.edges[index].e.y/(this.edges[index].e.x)),1);
+					let vec;
+          
+					if (index == (this.count_edges - 1)) {
+					  vec = new Line(this.edges[index].V0,this.edges[0].V1);	
+					}
+					else {
+						vec = new Line(this.edges[index].V0,this.edges[index + 1].V1);
+					}
+          
+          				if (!((n.x*vec.vec.x) + (n.y*vec.vec.y) > 0))
+					{
+                        			n.x *= -1;
+                        			n.y *= -1;
+					}
+					this.edges[index].N = n;
+				}	
+			}
+				
+		check()
+			{
+				let z = ((this.edges[this.count_edges - 1].V1.x - this.edges[this.count_edges - 1].V0.x)*((this.edges[0].V1.y - this.edges[0].V0.y))) - ((this.edges[this.count_edges - 1].V1.y - this.edges[this.count_edges - 1].V0.y)*((this.edges[0].V1.x - this.edges[0].V0.x)));
+				let zi = 0;
+				for(let index = 1; index < this.count_edges;index++) {
+					zi = ((this.edges[index - 1].V1.x - this.edges[index - 1].V0.x)*((this.edges[index].V1.y - this.edges[index].V0.y))) - ((this.edges[index - 1].V1.y - this.edges[index - 1].V0.y)*((this.edges[index].V1.x - this.edges[index].V0.x)));
+					if(zi*z < 0)
+						{
+							location.reload();
+							return false; // не выпуклый
+						}
+				}
+						return true; // выпуклый
+			}
+
+		draw_polygon(x,y) {
+				if(!this.end)
+					{
+						if(!this.start)
+							{
+								this.begin_point.x = x;
+								this.begin_point.y = y;
+
+								this.last_point.x = this.begin_point.x;
+								this.last_point.y = this.begin_point.y;
+
+								this.start = true;
+							}
+							else
+								{
+									if ((Math.abs(x - this.begin_point.x) < 30) && (Math.abs(y - this.begin_point.y) < 30))
+										{
+											Draw_Line(this.last_point.x,this.last_point.y,this.begin_point.x,this.begin_point.y);
+
+											this.edges.push(new Line(this.last_point,this.begin_point));
+											this.end = true;
+
+											this.last_point.x = this.begin_point.x;
+											this.last_point.y = this.begin_point.y;
+
+											this.count_edges++;
+
+											this.check();
+											this.compute_normals();
+										}
+									else
+										{
+											Draw_Line(this.last_point.x,this.last_point.y,x,y);
+
+											this.edges.push(new Line(this.last_point,new Point(x,y)));
+
+											this.last_point.x = x;
+											this.last_point.y = y;
+											this.count_edges++;
+										}
+									}
+							}
+					}				
+			
+			}
+
+		var canvas = document.getElementById('lab06');
+    		var ctx = canvas.getContext('2d');
+		
+		let x = 0;
+		let y = 0;
+        
+		let poly = new Polygon();
+    		let CurrentPoint = new Point();
+    		let CurrentColor = [];
+
+    		let stack = [];
+
+		canvas.addEventListener('click',function(e){
+			if (!poly.end)
+				{
+					poly.draw_polygon(e.offsetX,e.offsetY);
+				}
+			else
+				{
+                    			CurrentPoint.x = e.offsetX;
+                    			CurrentPoint.y = e.offsetY;
+                    			CurrentColor = ctx.getImageData(e.offsetX, e.offsetY, 1, 1).data;
+                    
+                    			stack.push(CurrentPoint);
+                   			while(stack.length != 0)
+                        		{
+                            			CurrentPoint = stack.pop(); 
+                            
+                            			let X_min = CurrentPoint.x;
+                           			p = ctx.getImageData(X_min-1, CurrentPoint.y, 1, 1).data;
+                            			while((CurrentColor[0] == p[0]) && (CurrentColor[1] == p[1]) &&
+                            			(CurrentColor[2] == p[2]) && (CurrentColor[3] == p[3]))
+                                		{
+                                    			--X_min;
+                                    			p = ctx.getImageData(X_min-1,CurrentPoint.y, 1, 1).data;
+                                		}
+                                
+                            			let X_max = CurrentPoint.x;
+                            			p = ctx.getImageData(X_max + 1, CurrentPoint.y, 1, 1).data;
+                            			while((CurrentColor[0]==p[0])&&(CurrentColor[1]==p[1])&&
+                            			(CurrentColor[2]==p[2])&&(CurrentColor[3]==p[3]))
+                                		{
+                                    			++X_max;
+                                    			p = ctx.getImageData(X_max + 1, CurrentPoint.y, 1, 1).data;
+                                		}
+                                
+                            			ctx.fillStyle = "#C71585";
+                            			Draw_Line(X_min,CurrentPoint.y,X_max,CurrentPoint.y); 
+                            			ctx.fillStyle = "#000000";
+                            
+                            			let flag = true;
+
+                            			for(let x = X_min;x <= X_max;++x)
+                                		{
+                                    			p = ctx.getImageData(x, CurrentPoint.y-1, 1, 1).data;
+
+                                    			if((CurrentColor[0] == p[0]) && (CurrentColor[1] == p[1]) &&
+                                    			(CurrentColor[2] == p[2]) && (CurrentColor[3] == p[3]))
+                                        		{
+                                            			if(flag)
+                                                		{
+                                                    			stack.push(new Point(x,CurrentPoint.y-1));
+                                                    			flag = !flag;
+                                                		}
+                                        		}
+                                    			else 
+                                        			flag = true;
+                                		}
+
+                            			flag = true; 
+
+                            			for(let x = X_min;x <= X_max;++x)
+                                		{
+                                    			p = ctx.getImageData(x, CurrentPoint.y+1, 1, 1).data;
+
+                                    			if((CurrentColor[0] == p[0]) && (CurrentColor[1] == p[1]) &&
+                                    			(CurrentColor[2] == p[2]) && (CurrentColor[3] == p[3]))
+                                        		{
+                                            			if(flag)
+                                                		{
+                                                    			stack.push(new Point(x, CurrentPoint.y+1));
+                                                    			flag = !flag;
+                                                		}
+                                        		}
+                                    			else 
+                                        			flag = true;
+                                		}
+                        		}
+				
+                		}
+		});				
+</script>
+</body>
+</html>
