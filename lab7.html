@@ -1,0 +1,135 @@
+<HTML>
+<BODY>
+   
+<canvas width='1500' height='700' id='lab07'>
+</canvas>
+    
+<script>
+
+// Press any key to fill the shape
+
+function Line(start, end) {
+    	this.x0 = start.x;
+    	this.x1 = end.x;
+    	this.y0 = start.y;
+    	this.y1 = end.y;
+}
+    
+function Draw_Line(x0,y0,x1,y1) {
+	let dy = Math.abs(y1-y0);
+	let dx = Math.abs(x1-x0);
+
+	let dmax = Math.max(dx,dy);
+	let dmin = Math.min(dx,dy);
+                
+   	 var xdir = (x0 < x1) ? 1 : -1;
+   	var ydir = (y0 < y1) ? 1 : -1;
+
+	let eps = 0; 
+	let k = 2*dmin;
+       
+        ctx.fillStyle = "#30D5C8";
+	if(dy <= dx) {
+		let y = y0;
+		for(let x=x0; x*xdir<=x1*xdir;x+=xdir) {
+			ctx.fillRect(x,y,2,2);
+			eps = eps+k;
+			if(eps > dmax){
+				y += ydir;
+				eps = eps - 2*dmax;
+			}
+		}	
+	}
+	else {
+		let x = x0;
+		for(let y=y0; y*ydir<=y1*ydir;y+=ydir) {
+			ctx.fillRect(x,y,1,1);
+			eps = eps+k;
+			if(eps > dmax){
+				x += xdir;
+				eps = eps - 2*dmax;
+			}
+		}	
+	}
+}
+    
+	var points = [];
+	var lines = [];
+	var start;
+	var current;
+	var snapShot;
+	var flag = true;
+					
+	var canvas = document.getElementById("lab07");
+	var ctx = canvas.getContext("2d");
+    
+	canvas.addEventListener("click",function(event) {
+    	if (flag) {
+		start = {x : event.clientX, y :  event.clientY};
+		points.push(start);
+		snapShot = ctx.getImageData(0, 0, canvas.width, canvas.height); 
+        }      
+    });
+    
+	canvas.addEventListener("mousemove", function (event){
+		if (flag) {
+			ctx.putImageData(snapShot, 0, 0);
+			current = {x : event.clientX, y :  event.clientY};
+			Draw_Line(start.x, start.y, current.x, current.y);
+		}
+	});
+
+	document.addEventListener("keypress",function (){
+		if (flag) {
+        	points.push(points[0])
+        	for (var i = 1; i < points.length; i++) {
+         	   lines.push(new Line(points[i - 1], points[i]));
+        	}
+
+        	ctx.putImageData(snapShot, 0, 0);
+	
+        	for(var j = 0; j < points.length - 1; j++){
+            	Draw_Line(points[j].x, points[j].y, points[j + 1].x, points[j + 1].y)
+        	}
+        	flag = false;
+            
+        	var minY = points[0].y;
+		var maxY = points[0].y;
+		for (var i = 0; i < points.length; i++) {
+			if (points[i].y < minY)
+				minY = points[i].y;
+			else if (points[i].y > maxY)
+				maxY = points[i].y;
+			}
+			for (var y = minY; y < maxY; y++) {
+				var meetPoint = MeetPoint(y);
+				for (var i = 1; i < meetPoint.length; i += 2) {
+					Draw_Line(meetPoint[i - 1],y, meetPoint[i],y)
+				}
+			}
+        	}
+	});
+
+function MeetPoint(y) {
+    	var meet = [];
+    	for (var i = 0; i < lines.length; i++) {
+        var l = lines[i];      
+        if ((y >= l.y0 && y < l.y1) || (y >= l.y1 && y < l.y0)) 
+            meet.push(Math.floor( (l.x1 - l.x0) / (l.y1 - l.y0) * (y - l.y0) + l.x0));
+    	}
+    
+    	for (var i = 0; i < meet.length; i++)
+        	for (var j = i; j < meet.length; j++) {
+            		if (meet[i]>meet[j]) {
+                		var meet_ = meet[i];
+                		meet[i] = meet[j];
+                		meet[j] = meet_;
+            		}
+        	}
+    	return  meet;
+}
+
+</script>
+
+</BODY>
+</HTML>
